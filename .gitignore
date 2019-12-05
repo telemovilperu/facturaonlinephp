@@ -1,0 +1,17 @@
+### Custom gitignore By jemkai ###
+*.log
+vendor/
+node_modules/
+.idea/
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+composer.phar
+composer.lock
+
+*.ini
+.vs
