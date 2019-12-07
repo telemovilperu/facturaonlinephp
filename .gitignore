@@ -15,3 +15,5 @@ composer.lock
 
 *.ini
 .vs
+.env
+*.zip
