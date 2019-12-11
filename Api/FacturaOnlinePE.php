@@ -10,7 +10,7 @@ class Telemovil{
 	protected $client = null;
 	protected $accessKey;
 	protected $secretKey;
-	protected $signature;
+	protected $timestamp;
 
 	public static function getInstance(){
 		if(!self::$instancia instanceof self){
@@ -50,48 +50,53 @@ class Telemovil{
 		if(empty($this->secretKey)){
 			return "secretKey no preset". PHP_EOL;
 		}
-		$this->signature =  hash_hmac("sha256",$this->accessKey.'|'.$timestamp,$this->secretKey);
+		$this->timestamp = $timestamp;
+		$this->signature =  hash_hmac("sha256",$this->accessKey.'|'.$this->timestamp,$this->secretKey);
 		return $this;
 	}
 	public function getSignature(){
 		return $this->signature;
 	}
-	public function getUsuario($timestamp){        
-		try {
+	public function getUsuario(){
 			$this->setUrl('usuario');
-			$client = $this->getClient();			
-			$response = $client->request('GET', 'usuario', [
-				'headers' => $this->getHeadersAuthorization($timestamp),
+			return $this->getRequest('GET', $this->url);
+	}
+	public function consultaComprobante($serieNumero, $nombreComprobante){
+		$this->setUrl($nombreComprobante.'/'.$serieNumero);
+		return $this->getRequest('GET', $this->url);
+	}
+	public function CDRComprobante($serieNumero, $nombreComprobante){
+		$this->setUrl($nombreComprobante.'/'.$serieNumero.'/constancia');
+		$jsonString = $this->getRequest('GET', $this->url);
+		$jsonArray  = json_decode($jsonString, true);
+		$bufferXML = $jsonArray['xml'];
+		unset($jsonArray['xml']);
+		$stringXML = json_encode($bufferXML['data']);
+		$rawXML = explode(',',trim($stringXML,'[]'));
+		$dataXML = implode('', array_map('chr',$rawXML));
+		$jsonArray = array_merge($jsonArray, array ('xml' => $dataXML));
+		return json_encode($jsonArray);
+	}
+
+	public function getRequest($method, $url){
+		try {
+			$client = $this->getClient();
+			$response = $client->request('GET', $url, [
+				'headers' => $this->getHeadersAuthorization($this->timestamp),
 				'verify'  => false
 			]);
-			return $response;
+			//echo $client->getUrl();
+			$code = $response->getStatusCode(); // 200  *http codes : https://developer.mozilla.org/es/docs/Web/HTTP/Status
+			//echo $code;
+			return $response->getBody();
 		} catch (Exception $e) {
 			echo $e->getMessage();
 		}
 	}
-	public function consultaComprobante($serieNumero, $nombreComprobante, $timestamp){
-		$this->setUrl($nombreComprobante.'/'.$serieNumero);
-		$client = $this->getClient();
-		$response = $client->request('GET', $nombreComprobante.'/'.$serieNumero, [
-			'headers' => $this->getHeadersAuthorization($timestamp),
-			'verify'  => false
-		]);		
-		return $response;
-	}
-	public function CDRComprobante($serieNumero, $nombreComprobante, $timestamp){
-		$this->setUrl($nombreComprobante.'/'.$serieNumero.'/constancia');
-		$client = $this->getClient();
-		$response = $client->request('GET', $nombreComprobante.'/'.$serieNumero.'/constancia', [
-			'headers' => $this->getHeadersAuthorization($timestamp),
-			'verify'  => false
-		]);
-		return $response;
-	}
-
-
 	public function getHeadersAuthorization($timestamp){
-		if(empty($this->signature)){
-			return "signature no generated". PHP_EOL;
+		if(empty($timestamp)){
+			$timestamp = time();
+			$this->generateSignature($timestamp);
 		}
 		$Authorization = 'Fo '.$this->accessKey.':'.$this->signature.':'.$timestamp;;
 		return [
