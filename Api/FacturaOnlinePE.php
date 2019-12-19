@@ -61,8 +61,17 @@ class Telemovil{
 			$this->setUrl('usuario');
 			return $this->getRequest('GET', $this->url);
 	}
+	public function emiteComprobante($jsonData, $nombreComprobante){
+		$this->setUrl($nombreComprobante);
+		return $this->getRequest('POST', $this->url, $jsonData);
+	}
 	public function consultaComprobante($serieNumero, $nombreComprobante){
 		$this->setUrl($nombreComprobante.'/'.$serieNumero);
+		return $this->getRequest('GET', $this->url);
+	}
+	public function exportaComprobante($serieNumero, $nombreComprobante, $tipo='pdf'){
+		if($tipo = 'txt') $tipo = 'plain';
+		$this->setUrl($nombreComprobante.'/'.$serieNumero.'/exportar?tipo='.$tipo);
 		return $this->getRequest('GET', $this->url);
 	}
 	public function CDRComprobante($serieNumero, $nombreComprobante){
@@ -77,13 +86,14 @@ class Telemovil{
 		$jsonArray = array_merge($jsonArray, array ('xml' => $dataXML));
 		return json_encode($jsonArray);
 	}
-
-	public function getRequest($method, $url){
+	public function getRequest($method, $url, $body=''){
+		print $body;
 		try {
 			$client = $this->getClient();
-			$response = $client->request('GET', $url, [
-				'headers' => $this->getHeadersAuthorization($this->timestamp),
-				'verify'  => false
+			$response = $client->request($method, $url, [
+				'headers'	=> $this->getHeadersAuthorization($this->timestamp),
+				'verify'	=> false,
+				'json'		=> $body
 			]);
 			//echo $client->getUrl();
 			$code = $response->getStatusCode(); // 200  *http codes : https://developer.mozilla.org/es/docs/Web/HTTP/Status
