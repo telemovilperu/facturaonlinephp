@@ -87,14 +87,16 @@ class Telemovil{
 		return json_encode($jsonArray);
 	}
 	public function getRequest($method, $url, $body=''){
-		print $body;
+		$headers = [
+			'headers'	=> $this->getHeadersAuthorization($this->timestamp),
+			'verify'	=> false			
+		];
+		if(!empty($body)){
+			$headers = array_merge($headers, ['json' => $body]);			
+		}
 		try {
 			$client = $this->getClient();
-			$response = $client->request($method, $url, [
-				'headers'	=> $this->getHeadersAuthorization($this->timestamp),
-				'verify'	=> false,
-				'json'		=> $body
-			]);
+			$response = $client->request($method, $url, $headers);
 			//echo $client->getUrl();
 			$code = $response->getStatusCode(); // 200  *http codes : https://developer.mozilla.org/es/docs/Web/HTTP/Status
 			//echo $code;
